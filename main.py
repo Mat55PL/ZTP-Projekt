@@ -1,102 +1,67 @@
 import pandas as pd
-import os
-from sklearn.model_selection import train_test_split
-
-from src.data_loader import DataLoader
-from src.data_visualizer import DataVisualizer
 from src.preprocessing import Preprocessor
-from src.random_forest_model import RandomForestModel
-
+from src.XGBoostTravelDelayPredictor import XGBoostTravelDelayPredictor
+from src.data_exploration import DataExplorer
+from src.data_loader import DataLoader
 def main():
-    # 1. Wczytanie danych
-    data_loader = DataLoader(file_path='./data/ForExportNewApi.csv')
-    df = data_loader.load_data()
-    print('[Status] Wczytano dane')
 
-    # 2. Preprocessing
-    preprocessor = Preprocessor()
-    df = preprocessor.data_only_for_country(df, 'POL')
-    df_clean = preprocessor.clean_data(df)
-    print('[Status] Wyczyszczono dane')
-    df_transformed = preprocessor.transform_data(df_clean)
-    print('[Status] Przekształcono dane')
+    # 1. wczytanie danych
 
-    # 3. Wybór zmiennej docelowej
-    y = df_transformed['MinsDelay']
+    print("[STATUS] Wczytywanie danych...")
+    data_path = "./data/ForExportNewApi.csv"
+    dataLoader = DataLoader(path=data_path)
+    data = dataLoader.load_data()
 
-    features_to_drop = [
-        'MinsDelay',         # kolumna docelowa
-        'UpdateTimeUTC', 
-        'LocalDateTime', 
-        'LocalDateTimeWeekAgo'
-    ]
+    # eksploracja danych
+    print("[STATUS] Eksploracja danych...")
+    explorer = DataExplorer(data)
 
-    X = df_transformed.drop(columns=features_to_drop, errors='ignore')
-    print('[Status] Przygotowano dane do modelu')
+    explorer.print_data_info()
+    # explorer.generate_histogram_for_all_columns()
+    explorer.plot_country_distribution()
+    explorer.plot_missing_data()
+    explorer.plot_correlation_matrix()
+    explorer.plot_targert_distribution(target_column='MinsDelay')
+    explorer.plot_top_cities(target_column='MinsDelay', top_n=10)
 
-    # 4. Podział na zbiór treningowy i testowy
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
 
-    # 4.1 Wypisz rozmiary zbiorów treningowego i testowego oraz zapisz je do folderu Analysis jako plik csv
-    print(f'X_train shape: {X_train.shape}')
-    print(f'X_test shape: {X_test.shape}')
-    print(f'y_train shape: {y_train.shape}')
-    print(f'y_test shape: {y_test.shape}')
+    # 2. przetwarzanie danych
+    print("[STATUS] Przetwarzanie danych...")
+    preprocessor = Preprocessor(data)
 
-    # sprawdz czy istnieje folder Analysis, jesli nie to go stworz
+    preprocessor.clear_data()
 
-    if not os.path.exists('Analysis'):
-        os.makedirs('Analysis')
+    preprocessor.encode_categorical_data(columns=["Country", "City"])
 
-    X_train.to_csv('./Analysis/X_train.csv', index=False)
-    X_test.to_csv('./Analysis/X_test.csv', index=False)
-    y_train.to_csv('./Analysis/y_train.csv', index=False)
-    y_test.to_csv('./Analysis/y_test.csv', index=False)
+    preprocessor.convert_to_datetime('LocalDateTime')
+    preprocessor.create_time_features(datetime_column='LocalDateTime')
+    preprocessor.preprocess_columns_for_xgboost()
+    print("[STATUS] Podział danych na zbiór treningowy i testowy...")
+    X_train, X_test, y_train, y_test = preprocessor.split_data(target_column='MinsDelay', test_size=0.2, random_state=42)
 
-    # 5. Inicjalizacja i trenowanie modelu
-    print('[Status] Rozpoczęto trenowanie modelu...')
-    rf_model = RandomForestModel(n_estimators=150, random_state=42)
-    rf_model.train(X_train, y_train)
-    print('[Status] Wytrenowano model')
+    # 3. zapis przetworzonych danych
+    print("[STATUS] Zapis przetworzonych danych...")
+    preprocessor.save_processed_data(X_train, X_test, y_train, y_test, output_path="./result/")
 
-    # Wyliczamy przewidywania na zbiorze testowym
-    y_pred = rf_model.predict(X_test)
+    data = preprocessor.get_preprocessed_data()
 
-    # 6. Ewaluacja
-    mse, r2 = rf_model.evaluate(X_test, y_test)
-    print("MSE:", mse)
-    print("R2 Score:", r2)
+    # 4. trenowanie modelu
+    print("[STATUS] Trenowanie modelu XGBoost...")
+    predictor = XGBoostTravelDelayPredictor()
+    predictor.train(X_train, y_train, param_grid=None)
 
-    # 7. Inicjalizacja wizualizatora
-    #    Zapisujemy listę kolumn, której model oczekuje:
-    model_features = X_train.columns.tolist()
+    # 5. ewaluacja modelu
+    print("[STATUS] Ewaluacja modelu...")
+    predictor.evaluate(X_test, y_test)
 
-    viz = DataVisualizer(
-    model_features=model_features,
-    label_encoder_city=preprocessor.label_encoder_city,
-    label_encoder_country=preprocessor.label_encoder_country
-    )
+    # 6. zapis modelu
+    print("[STATUS] Zapis modelu...")
+    predictor.save_model(file_path="./models/xgboost_model.pkl")
     
-    # 8. Wizualizacje podstawowe
-    # 8a. Macierz korelacji na danych treningowych
-    viz.plot_correlation_matrix(X_train)
-
-    # 8b. Histogram wybranej kolumny (np. TrafficIndexLive)
-    viz.plot_histogram(df_transformed, column='TrafficIndexLive')
-
-    # 8c. Feature Importances
-    viz.plot_feature_importances(rf_model.model.feature_importances_, X_train.columns)
-
-    # 8d. Porównanie wartości rzeczywistych i przewidywanych
-    viz.plot_prediction_vs_true(y_test, y_pred)
-
-    viz.plot_traffic_by_hour_for_city_and_day(data=df_transformed, city='krakow', day_of_week=0)
-
-    viz.plot_traffic_by_hour_for_city_and_day(data=df_transformed, city='szczecin', day_of_week=0)
-
-
+    # 7. Wizualizacja ważności cech
+    print("[STATUS] Wizualizacja ważności cech...")
+    predictor.plot_feature_importance()
+    predictor.plot_actual_vs_predicted(y_test, predictor.predict(X_test))
 
 if __name__ == "__main__":
     main()

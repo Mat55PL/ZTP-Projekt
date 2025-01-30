@@ -34,6 +34,7 @@ class Preprocessor:
         self.data['month'] = self.data[datetime_column].dt.month
 
     def split_data(self, target_column: str, test_size: float = 0.2, random_state: int = 42):
+        # podział danych na zbiór treningowy i testowy 
         if target_column not in self.data.columns:
             raise ValueError(f"Kolumna {target_column} nie istnieje w danych.")
         
@@ -47,17 +48,13 @@ class Preprocessor:
         return X_train, X_test, y_train, y_test
     
     def save_processed_data(self, X_train, X_test, y_train, y_test, output_path: str = "./"):
-        # Dodaj separator, jeśli brak
         if output_path[-1] != "/":
             output_path += "/"
 
-        # Utwórz unikalną ścieżkę dla wyników
         output_path += pd.Timestamp.now().strftime("%Y%m%d_%H%M%S") + "/"
 
-        # Upewnij się, że katalog istnieje
         os.makedirs(output_path, exist_ok=True)
 
-        # Łączenie danych i zapis do plików
         train_data = pd.concat([X_train, y_train], axis=1)
         test_data = pd.concat([X_test, y_test], axis=1)
 
@@ -68,9 +65,9 @@ class Preprocessor:
 
     def preprocess_columns_for_xgboost(self):
         # Convert datetime columns to numeric features
-        self.data['LocalDateTime'] = pd.to_datetime(self.data['LocalDateTime']).astype(int) // 10**9
-        self.data['LocalDateTimeWeekAgo'] = pd.to_datetime(self.data['LocalDateTimeWeekAgo']).astype(int) // 10**9
-        self.data['UpdateTimeUTC'] = pd.to_datetime(self.data['UpdateTimeUTC']).astype(int) // 10**9
+        self.data['LocalDateTime'] = pd.to_datetime(self.data['LocalDateTime']).astype(int) 
+        self.data['LocalDateTimeWeekAgo'] = pd.to_datetime(self.data['LocalDateTimeWeekAgo']).astype(int) 
+        self.data['UpdateTimeUTC'] = pd.to_datetime(self.data['UpdateTimeUTC']).astype(int) 
 
     def get_preprocessed_data(self):
         return self.data

@@ -17,11 +17,10 @@ class DataExplorer:
         print(self.data.describe())
 
     def generate_histogram_for_all_columns(self):
-        # Oblicz potrzebną liczbę wierszy na podstawie liczby kolumn
+        # Wykresy histogramów dla wszystkich kolumn
         n_cols = len(self.data.columns)
-        n_rows = (n_cols + 3) // 4  # Zaokrąglenie w górę przy dzieleniu przez 4
+        n_rows = (n_cols + 3) // 4  
         
-        # histogram dla wszystkich kolumn na jednym wykresie
         plt.figure(figsize=(20, 4*n_rows))
         for i, col in enumerate(self.data.columns, 1):
             plt.subplot(n_rows, 4, i)
@@ -35,12 +34,10 @@ class DataExplorer:
     def plot_country_distribution(self, country_column='Country'):
         top_countries = self.data[country_column].value_counts().head(10)
         
-
         others_percent = (self.data[country_column].value_counts().sum() - top_countries.sum()) / len(self.data) * 100
         
         plt.figure(figsize=(12, 8))
         
-
         patches, texts, autotexts = plt.pie(
             top_countries,
             labels=top_countries.index,
@@ -81,30 +78,22 @@ class DataExplorer:
         plt.show()
 
     def plot_missing_data(self):
-        """
-        Wizualizuje brakujące dane w formie heatmapy.
-        """
+        # Wykres typu heatmap przedstawiający braki w danych
         plt.figure(figsize=(10, 6))
         sns.heatmap(self.data.isnull(), cbar=False, cmap='viridis')
         plt.title('Brakujące dane')
         plt.show()
 
     def plot_correlation_matrix(self):
-        """
-        Wizualizuje macierz korelacji między zmiennymi numerycznymi w danych.
-        """
-        # Wybór tylko kolumn numerycznych
+        # Wykres macierzy korelacji
         numeric_data = self.data.select_dtypes(include=["number"])
         
-        # Sprawdzenie, czy istnieją dane numeryczne
         if numeric_data.empty:
             print("Brak danych numerycznych do obliczenia korelacji.")
             return
 
-        # Obliczanie macierzy korelacji
         corr_matrix = numeric_data.corr()
 
-        # Wizualizacja macierzy korelacji
         plt.figure(figsize=(12, 8))
         sns.heatmap(corr_matrix, annot=True, fmt=".2f", cmap="coolwarm")
         plt.title("Macierz korelacji")
@@ -112,11 +101,7 @@ class DataExplorer:
 
 
     def plot_distribution(self, column: str):
-        """
-        Wizualizuje rozkład wartości w wybranej kolumnie.
-
-        :param column: Nazwa kolumny do analizy.
-        """
+        # Wykres rozkładu wartości w kolumnie
         if column not in self.data.columns:
             raise ValueError(f"Kolumna {column} nie istnieje w danych.")
 
@@ -128,12 +113,7 @@ class DataExplorer:
         plt.show()
 
     def plot_top_cities(self, target_column: str, top_n: int = 10):
-        """
-        Wizualizuje średnie wartości zmiennej docelowej dla miast z największymi średnimi wartościami.
-
-        :param target_column: Nazwa kolumny docelowej.
-        :param top_n: Liczba miast do wyświetlenia.
-        """
+        # Wykres top miast wg średniej wartości w kolumnie docelowej
         if 'City' not in self.data.columns or target_column not in self.data.columns:
             raise ValueError("Brak wymaganych kolumn 'City' lub docelowej w danych.")
 
@@ -148,13 +128,6 @@ class DataExplorer:
         plt.show()
 
     def plot_seasonality(self, time_column: str, target_column: str, period: str):
-        """
-        Wizualizuje sezonowość danych (godzinową, dzienną, tygodniową).
-
-        :param time_column: Kolumna z datą i czasem.
-        :param target_column: Kolumna docelowa do analizy sezonowości.
-        :param period: Okres sezonowości ('hour', 'day_of_week', 'month').
-        """
         if time_column not in self.data.columns or target_column not in self.data.columns:
             raise ValueError("Brak wymaganych kolumn czasowych lub docelowych w danych.")
 
@@ -185,9 +158,6 @@ class DataExplorer:
         plt.show()
 
     def plot_missing_summary(self):
-        """
-        Wizualizuje podsumowanie braków danych w postaci słupków.
-        """
         missing_data = self.data.isnull().mean() * 100
         missing_data = missing_data[missing_data > 0].sort_values(ascending=False)
 

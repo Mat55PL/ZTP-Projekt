@@ -41,12 +41,7 @@ class XGBoostTravelDelayPredictor:
         print(f"Najlepsze hiperparametry: {grid_search.best_params_}")
 
     def predict(self, X: pd.DataFrame) -> np.ndarray:
-            """
-            Dokonuje predykcji na podstawie wytrenowanego modelu.
-
-            :param X: Macierz cech.
-            :return: Predykcje modelu.
-            """
+            # Dokonuje predykcji na podstawie modelu XGBoost
             if self.model is None:
                 raise ValueError("Model nie został wytrenowany. Najpierw wywołaj metodę train().")
 
@@ -65,7 +60,6 @@ class XGBoostTravelDelayPredictor:
         return mae, rmse, r2
     
     def save_model(self, file_path: str):
-        # jeżeli folder nie istnieje to go stwórz
         folder_path = "/".join(file_path.split("/")[:-1])
         if folder_path:
             os.makedirs(folder_path, exist_ok=True)
@@ -80,9 +74,7 @@ class XGBoostTravelDelayPredictor:
 
 
     def plot_feature_importance(self):
-        """
-        Wizualizuje znaczenie cech w modelu XGBoost.
-        """
+        print("[Status] Generowanie wykresu ważności cech")
         if self.model is None:
             raise ValueError("Model nie został wytrenowany. Najpierw wywołaj metodę train().")
 
@@ -102,6 +94,7 @@ class XGBoostTravelDelayPredictor:
         plt.show()
 
     def plot_actual_vs_predicted(self, y_test, y_pred):
+        print("[Status] Generowanie wykresu rzeczywistych vs. przewidywanych wartości")
         plt.figure(figsize=(8, 8))
         plt.scatter(y_test, y_pred, alpha=0.5)
         plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--')

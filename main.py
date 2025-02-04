@@ -8,8 +8,7 @@ def main():
     # 1. wczytanie danych
 
     print("[STATUS] Wczytywanie danych...")
-    data_path = "./data/ForExportNewApi.csv"
-    dataLoader = DataLoader(path=data_path)
+    dataLoader = DataLoader()
     data = dataLoader.load_data()
 
     # eksploracja danych
